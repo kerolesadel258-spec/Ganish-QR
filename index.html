@@ -20,6 +20,10 @@
         .main-buttons { display: grid; gap: 12px; max-width: 100%; margin: auto; }
         .menu-btn { padding: 20px; font-size: 18px; border: none; border-radius: 15px; cursor: pointer; background: var(--primary); color: white; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: 0.3s; }
         .menu-btn:active { transform: scale(0.95); }
+        .sync-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; padding: 15px; background: #eef2f3; border-radius: 15px; border: 1px dashed var(--accent); }
+        .sync-btn { padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; color: white; }
+        .export-btn { background: #8e44ad; }
+        .import-btn { background: #27ae60; }
         .alert-btn { background: #d35400; }
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); overflow-y: auto; }
         .modal-content { background: var(--white); margin: 0 auto; padding: 20px; width: 100%; min-height: 100%; box-sizing: border-box; position: relative; border-radius: 0; }
@@ -59,6 +63,30 @@
             <button class="menu-btn" onclick="openModal('reportModal')">📊 السجل العام</button>
             <button class="menu-btn alert-btn" onclick="openModal('absentModal')">⚠️ الغائبين</button>
         </div>
+
+        <div class="sync-container">
+            <button class="sync-btn export-btn" onclick="openSyncModal('EXPORT')">📤 تصدير بيانات</button>
+            <button class="sync-btn import-btn" onclick="openSyncModal('IMPORT')">📥 استيراد بيانات</button>
+            <div style="grid-column: span 2; font-size: 12px; color: #666; margin-top: 5px;">مركز مزامنة هواتف الخدام</div>
+        </div>
+    </div>
+
+    <div id="syncModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('syncModal')">&times;</span>
+            <h2 id="syncTitle">مزامنة</h2>
+            <div style="background:#f9f9f9; padding:20px; border-radius:15px; border:1px solid #ddd;">
+                <label id="syncLabel" style="display:block; margin-bottom:10px; font-weight:bold;"></label>
+                <input type="date" id="syncDate" class="search-input">
+                
+                <div id="importSection" style="display:none;">
+                    <label style="display:block; margin-bottom:10px; font-weight:bold;">الصق كود المزامنة هنا:</label>
+                    <textarea id="syncCodeArea" class="search-input" rows="5" placeholder="ضع الكود هنا..."></textarea>
+                </div>
+
+                <button id="syncActionBtn" class="menu-btn" style="width:100%; margin-top:10px;"></button>
+            </div>
+        </div>
     </div>
 
     <div id="addModal" class="modal">
@@ -69,10 +97,9 @@
             <input type="tel" id="mPhone" placeholder="رقم التليفون (للكود)" class="search-input">
             <button class="menu-btn" style="background:var(--success); width:100%" onclick="addNewMember()">حفظ وإنشاء QR</button>
             <div id="qrcode" style="display: flex; justify-content: center; padding: 10px; background: white; border-radius: 10px; margin-top: 10px;"></div>
-            
             <h3>قائمة المخدومين</h3>
             <div id="membersCount" class="count-badge">إجمالي المخدومين: 0</div>
-            <input type="text" id="searchMembers" onkeyup="renderMembersTable()" placeholder="ابحث في أسماء المخدومين المضافين..." class="search-input">
+            <input type="text" id="searchMembers" onkeyup="renderMembersTable()" placeholder="ابحث في أسماء المخدومين..." class="search-input">
             <div class="table-wrapper"><table id="membersTable"><thead><tr><th>الاسم</th><th>حذف</th></tr></thead><tbody></tbody></table></div>
         </div>
     </div>
@@ -85,18 +112,15 @@
             <div id="reader"></div>
             <div id="scanStatus">جاري تهيئة الكاميرا...</div>
             <button id="retryBtn" class="retry-btn" onclick="startScanner()">🔄 إعادة تشغيل الكاميرا</button>
-            
             <div style="background:#f9f9f9; padding:15px; border-radius:15px; margin-top:15px; border:1px solid #eee;">
                 <input type="text" id="manualSearch" onkeyup="filterManualList()" placeholder="بحث بالاسم للتحضير اليدوي..." class="search-input">
                 <select id="namesList" size="4" style="width:100%; padding:10px; margin-bottom:10px; border-radius:10px; border:1px solid #ddd;"></select>
                 <button class="menu-btn" style="background:var(--success); width:100%;" onclick="registerManual()">✅ تحضير المختار</button>
             </div>
-
             <h3>حضور اليوم</h3>
             <div id="presentCount" class="count-badge">عدد الحاضرين اليوم: 0</div>
             <input type="text" id="searchToday" onkeyup="loadTodayTable()" placeholder="ابحث في الحاضرين اليوم..." class="search-input">
             <div class="table-wrapper"><table id="todayTable"><thead><tr><th>الاسم</th><th>حذف</th></tr></thead><tbody></tbody></table></div>
-            <button class="clear-all-btn" onclick="clearAttendanceData()">🗑️ مسح كافة سجلات الحضور (اليوم والسابق)</button>
         </div>
     </div>
 
@@ -106,7 +130,18 @@
             <h2>📊 السجل العام</h2>
             <input type="text" id="searchKey" onkeyup="searchGlobal()" placeholder="بحث في السجل..." class="search-input">
             <div class="table-wrapper"><table id="attendanceTable"><thead><tr><th>الاسم</th><th>التليفون</th><th>الأيام</th><th>حذف</th></tr></thead><tbody></tbody></table></div>
-            <button class="clear-all-btn" onclick="clearAttendanceData()">🗑️ مسح السجل العام بالكامل</button>
+            <button class="clear-all-btn" onclick="clearAttendanceData()">🗑️ مسح السجلات</button>
+        </div>
+    </div>
+
+    <div id="absentModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('absentModal')">&times;</span>
+            <h2>قائمة الغائبين</h2>
+            <input type="date" id="absentCheckDate" class="search-input" onchange="renderAbsentList()">
+            <div id="absentCount" class="count-badge">عدد الغائبين: 0</div>
+            <input type="text" id="searchAbsent" onkeyup="renderAbsentList()" placeholder="ابحث في الغائبين..." class="search-input">
+            <div class="table-wrapper"><table id="absentTable"><thead><tr><th>الاسم</th><th>التليفون</th></tr></thead><tbody></tbody></table></div>
         </div>
     </div>
 
@@ -115,20 +150,6 @@
             <span class="close" onclick="closeModal('historyModal')">&times;</span>
             <h2 id="historyOwnerName">التواريخ</h2>
             <div class="table-wrapper"><table id="personDatesTable"><thead><tr><th>التاريخ</th><th>حذف</th></tr></thead><tbody></tbody></table></div>
-        </div>
-    </div>
-
-    <div id="absentModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal('absentModal')">&times;</span>
-            <h2>قائمة الغائبين</h2>
-            <div style="background:#fef9e7; padding:15px; border-radius:10px; margin-bottom:10px; border:1px solid #f9e79f;">
-                <label>اختر تاريخ الاجتماع:</label>
-                <input type="date" id="absentCheckDate" class="search-input" style="margin-top:5px;" onchange="renderAbsentList()">
-            </div>
-            <div id="absentCount" class="count-badge">عدد الغائبين: 0</div>
-            <input type="text" id="searchAbsent" onkeyup="renderAbsentList()" placeholder="ابحث في الغائبين..." class="search-input">
-            <div class="table-wrapper"><table id="absentTable"><thead><tr><th>الاسم</th><th>التليفون</th></tr></thead><tbody></tbody></table></div>
         </div>
     </div>
 
@@ -158,26 +179,75 @@
 
         function closeModal(id) { document.getElementById(id).style.display = "none"; }
 
+        // وظائف المزامنة الجديدة
+        function openSyncModal(mode) {
+            const modal = document.getElementById('syncModal');
+            const title = document.getElementById('syncTitle');
+            const label = document.getElementById('syncLabel');
+            const btn = document.getElementById('syncActionBtn');
+            const importSection = document.getElementById('importSection');
+            const syncDate = document.getElementById('syncDate');
+            
+            syncDate.value = new Date().toISOString().split('T')[0];
+            modal.style.display = "block";
+
+            if(mode === 'EXPORT') {
+                title.innerText = "📤 تصدير حضور يوم";
+                label.innerText = "اختر التاريخ الذي تريد تصدير بياناته:";
+                importSection.style.display = "none";
+                btn.innerText = "نسخ كود التصدير";
+                btn.style.background = "#8e44ad";
+                btn.onclick = () => {
+                    const date = syncDate.value;
+                    const records = attendance.filter(a => a.date === date);
+                    if(records.length === 0) return alert("لا يوجد حضور مسجل في هذا التاريخ!");
+                    const code = btoa(unescape(encodeURIComponent(JSON.stringify(records))));
+                    const temp = document.createElement('textarea');
+                    document.body.appendChild(temp);
+                    temp.value = code;
+                    temp.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(temp);
+                    alert("تم نسخ الكود بنجاح! أرسله لزميلك.");
+                };
+            } else {
+                title.innerText = "📥 استيراد بيانات";
+                label.innerText = "اختر التاريخ الذي تريد إضافة الحضور إليه:";
+                importSection.style.display = "block";
+                btn.innerText = "إتمام الاستيراد";
+                btn.style.background = "#27ae60";
+                btn.onclick = () => {
+                    const targetDate = syncDate.value;
+                    const code = document.getElementById('syncCodeArea').value.trim();
+                    if(!code) return alert("من فضلك الصق الكود أولاً!");
+                    try {
+                        const importedRecords = JSON.parse(decodeURIComponent(escape(atob(code))));
+                        let added = 0;
+                        importedRecords.forEach(rec => {
+                            const exists = attendance.some(a => a.phone === rec.phone && a.date === targetDate);
+                            if(!exists) {
+                                attendance.push({ name: rec.name, phone: rec.phone, date: targetDate });
+                                added++;
+                            }
+                        });
+                        localStorage.setItem('attendance_data', JSON.stringify(attendance));
+                        alert("تم الاستيراد بنجاح! تم إضافة " + added + " شخص ليوم " + targetDate);
+                        closeModal('syncModal');
+                    } catch(e) { alert("كود غير صالح!"); }
+                };
+            }
+        }
+
+        // الوظائف الأساسية
         async function startScanner() {
             const statusBox = document.getElementById('scanStatus');
-            const retryBtn = document.getElementById('retryBtn');
             const readerDiv = document.getElementById("reader");
-            statusBox.innerText = "جاري تهيئة الكاميرا...";
-            retryBtn.style.display = "none";
             if (html5QrCode) { try { await html5QrCode.stop(); } catch(e){} }
             readerDiv.innerHTML = "";
             html5QrCode = new Html5Qrcode("reader");
-            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (decodedText) => processAttendance(decodedText))
+            html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (text) => processAttendance(text))
             .then(() => { statusBox.innerText = "✅ الكاميرا تعمل"; statusBox.style.background = "#d4edda"; })
-            .catch(err => { 
-                statusBox.innerHTML = "❌ فشل الكاميرا."; 
-                statusBox.style.background = "#f8d7da"; retryBtn.style.display = "block";
-                statusBox.innerHTML += `<br><input type="file" id="qr-file" accept="image/*" style="margin-top:10px; width:100%">`;
-                document.getElementById('qr-file').onchange = e => {
-                    const file = e.target.files[0];
-                    if(file) html5QrCode.scanFile(file, true).then(res => processAttendance(res)).catch(e => alert("كود غير واضح"));
-                };
-            });
+            .catch(() => { statusBox.innerText = "❌ خطأ في الكاميرا"; });
         }
 
         async function stopScanner() { if (html5QrCode && html5QrCode.isScanning) { await html5QrCode.stop(); html5QrCode = null; } }
@@ -210,19 +280,10 @@
             openModal('historyModal');
         }
 
-        function deleteRecord(p, d) {
-            if(confirm("حذف هذا اليوم؟")) {
-                attendance = attendance.filter(a => !(a.phone === p && a.date === d));
-                localStorage.setItem('attendance_data', JSON.stringify(attendance));
-                loadTodayTable(); renderAttendanceSummary(attendance); 
-                if(document.getElementById('historyModal').style.display === "block") showHistory(p);
-            }
-        }
-
         function addNewMember() {
             const n = document.getElementById('mName').value.trim(), p = document.getElementById('mPhone').value.trim();
             if(n && p) {
-                if(members.some(m => m.phone === p)) { alert("مسجل مسبقاً"); return; }
+                if(members.some(m => m.phone === p)) return alert("مسجل مسبقاً");
                 members.push({ name: n, phone: p });
                 localStorage.setItem('church_members', JSON.stringify(members));
                 document.getElementById('qrcode').innerHTML = "";
@@ -233,59 +294,48 @@
         }
 
         function renderMembersTable() { 
-            const q = document.getElementById('searchMembers') ? document.getElementById('searchMembers').value.toLowerCase() : "";
+            const q = document.getElementById('searchMembers').value.toLowerCase();
             const filtered = members.filter(m => m.name.toLowerCase().includes(q));
             document.getElementById('membersCount').innerText = `إجمالي المخدومين: ${members.length}`;
-            document.querySelector("#membersTable tbody").innerHTML = filtered.map((m, i) => `<tr><td>${m.name}</td><td><button class="del-btn" onclick="if(confirm('حذف؟')){members.splice(members.indexOf(m),1);localStorage.setItem('church_members',JSON.stringify(members));renderMembersTable();}">🗑️</button></td></tr>`).join(''); 
+            document.querySelector("#membersTable tbody").innerHTML = filtered.map(m => `<tr><td>${m.name}</td><td><button class="del-btn" onclick="if(confirm('حذف؟')){members = members.filter(x=>x!==m);localStorage.setItem('church_members',JSON.stringify(members));renderMembersTable();}">🗑️</button></td></tr>`).join(''); 
         }
 
         function loadTodayTable() { 
             const d = document.getElementById('attendanceDate').value, q = document.getElementById('searchToday').value.toLowerCase();
             const filtered = attendance.filter(a => a.date === d && a.name.toLowerCase().includes(q));
-            const countAll = attendance.filter(a => a.date === d).length;
-            document.getElementById('presentCount').innerText = `عدد الحاضرين اليوم: ${countAll}`;
+            document.getElementById('presentCount').innerText = `عدد الحاضرين اليوم: ${attendance.filter(a => a.date === d).length}`;
             document.querySelector("#todayTable tbody").innerHTML = filtered.map(a => `<tr><td>${a.name}</td><td><button class="del-btn" onclick="deleteRecord('${a.phone}','${a.date}')">🗑️</button></td></tr>`).join(''); 
-        }
-
-        function filterManualList() { 
-            const q = document.getElementById('manualSearch').value.toLowerCase(); 
-            document.getElementById('namesList').innerHTML = members.filter(m => m.name.toLowerCase().includes(q)).map(m => `<option value="${m.phone}">${m.name}</option>`).join(''); 
-        }
-
-        function registerManual() { const p = document.getElementById('namesList').value; if(p) processAttendance(p); }
-
-        function deleteFullHistory(p) { 
-            if(confirm("حذف كل سجل حضور الشخص؟")) { 
-                attendance = attendance.filter(a => a.phone !== p); 
-                localStorage.setItem('attendance_data', JSON.stringify(attendance)); 
-                renderAttendanceSummary(attendance); 
-            } 
-        }
-
-        function searchGlobal() { 
-            const k = document.getElementById('searchKey').value.toLowerCase(); 
-            const filtered = attendance.filter(a => a.name.toLowerCase().includes(k) || a.phone.includes(k));
-            renderAttendanceSummary(filtered); 
         }
 
         function renderAbsentList() {
             const d = document.getElementById('absentCheckDate').value, q = document.getElementById('searchAbsent').value.toLowerCase();
             if(!d) return;
             const present = attendance.filter(a => a.date === d).map(a => a.phone);
-            const fullAbsentList = members.filter(m => !present.includes(m.phone));
-            const filtered = fullAbsentList.filter(m => m.name.toLowerCase().includes(q));
-            document.getElementById('absentCount').innerText = `عدد الغائبين: ${fullAbsentList.length}`;
+            const fullAbsent = members.filter(m => !present.includes(m.phone));
+            const filtered = fullAbsent.filter(m => m.name.toLowerCase().includes(q));
+            document.getElementById('absentCount').innerText = `عدد الغائبين: ${fullAbsent.length}`;
             document.querySelector("#absentTable tbody").innerHTML = filtered.map(m => `<tr><td>${m.name}</td><td>${m.phone}</td></tr>`).join('');
         }
 
+        function deleteRecord(p, d) {
+            if(confirm("حذف؟")) {
+                attendance = attendance.filter(a => !(a.phone === p && a.date === d));
+                localStorage.setItem('attendance_data', JSON.stringify(attendance));
+                loadTodayTable(); renderAttendanceSummary(attendance);
+            }
+        }
+
+        function filterManualList() { 
+            const q = document.getElementById('manualSearch').value.toLowerCase(); 
+            document.getElementById('namesList').innerHTML = members.filter(m => m.name.toLowerCase().includes(q)).map(m => `<option value="${m.phone}">${m.name}</option>`).join(''); 
+        }
+        function registerManual() { const p = document.getElementById('namesList').value; if(p) processAttendance(p); }
+
         function clearAttendanceData() {
-            if(confirm("⚠️ هل أنت متأكد من مسح كافة سجلات الحضور؟")) {
-                if(confirm("تأكيد نهائي: هل تريد المسح؟")) {
-                    attendance = [];
-                    localStorage.setItem('attendance_data', JSON.stringify(attendance));
-                    alert("تم مسح السجلات بنجاح ✅");
-                    location.reload();
-                }
+            if(confirm("سيتم مسح كل سجلات الحضور!")) {
+                attendance = [];
+                localStorage.setItem('attendance_data', JSON.stringify(attendance));
+                location.reload();
             }
         }
 
